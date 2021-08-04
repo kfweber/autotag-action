@@ -6,10 +6,15 @@ const owner = github.context.payload.repository.owner.login;
 const repo = github.context.payload.repository.name;
 
 async function checkTag(octokit, tagName) {
-    const { data } = await octokit.repos.listTags({
-        owner,
-        repo
-    });
+    const data = await octokit.paginate(
+        octokit.rest.repos.listTags,
+        {
+            owner: owner,
+            repo: repo,
+            per_page: 100
+        },
+        response => response.data
+    )
 
     if (data) {
         const result = data.filter(tag => tag.name === tagName);
@@ -23,34 +28,36 @@ async function checkTag(octokit, tagName) {
 }
 
 async function getLatestTag(octokit, boolAll = true) {
-    const { data } = await octokit.repos.listTags({
-        owner,
-        repo
-    });
+
+    const tags = await octokit.paginate(
+        octokit.rest.repos.listTags,
+        {
+            owner: owner,
+            repo: repo,
+            per_page: 100
+        },
+        response => response.data.filter(tag => semver.clean(tag.name) !== null)
+    )
 
     // ensure the highest version number is the last element
-    // strip all non version tags
-    const allVTags = data
-        .filter(tag => semver.clean(tag.name) !== null);
-
-    allVTags
+    tags
         .sort((a, b) => semver.compare(semver.clean(a.name), semver.clean(b.name)));
 
     if (boolAll) {
-        return allVTags.pop();
+        return tags.pop();
     }
 
     // filter prereleases
     // core.info("filter only main releases");
 
-    const filtered = allVTags.filter((b) => semver.prerelease(b.name) === null);
+    const filtered = tags.filter((b) => semver.prerelease(b.name) === null);
     const result = filtered.pop();
 
     return result;
 }
 
 async function loadBranch(octokit, branch) {
-    const result = await octokit.git.listMatchingRefs({
+    const result = await octokit.rest.git.listMatchingRefs({
         owner,
         repo,
         ref: `heads/${branch}`
@@ -67,13 +74,18 @@ async function checkMessages(octokit, branchHeadSha, tagSha, issueTags) {
 
     let releaseBump = "none";
 
-    const result = await octokit.repos.listCommits({
-        owner,
-        repo,
-        sha
-    });
-
-    if (!(result && result.data)) {
+    const results = await octokit.paginate(
+        octokit.rest.repos.listCommits,
+        {
+            owner: owner,
+            repo: repo,
+            sha: sha,
+            per_page: 100
+        },
+        response => response.data
+    )
+    
+    if (!results) {
         return releaseBump;
     }
 
@@ -85,11 +97,11 @@ async function checkMessages(octokit, branchHeadSha, tagSha, issueTags) {
     const fix   = new RegExp("fix(?:es)? #\\d+");
     const matcher = new RegExp(/fix(?:es)? #(\d+)\b/);
 
-    for (const commit of result.data) {
-        // core.info(commit.message);
-        const message = commit.commit.message;
+    for (const result of results) {
+        const message = result.commit.message;
+        // core.info(message);
 
-        if (commit.sha === tagSha) {
+        if (result.sha === tagSha) {
             break;
         }
         // core.info(`commit is : "${JSON.stringify(commit.commit, undefined, 2)}"`);
@@ -231,8 +243,8 @@ async function action() {
         const latestTag = await getLatestTag(octokit);
         const latestMainTag = await getLatestTag(octokit, false);
 
-        core.info(`the previous tag of the repository ${ JSON.stringify(latestTag, undefined, 2) }`);
-        core.info(`the previous main tag of the repository ${ JSON.stringify(latestMainTag, undefined, 2) }`);
+        core.info(`the latest tag of the repository ${ JSON.stringify(latestTag, undefined, 2) }`);
+        core.info(`the latest main tag of the repository ${ JSON.stringify(latestMainTag, undefined, 2) }`);
 
         const versionTag = latestTag ? latestTag.name : "0.0.0";
 
@@ -264,14 +276,14 @@ async function action() {
             }
         }
 
-        // check if commits and issues point to a diffent release
-        core.info("commits in branch");
-        const msgLevel = await checkMessages(octokit, branchInfo.object.sha, latestMainTag.commit.sha,  issLabs);
-        // core.info(`commit messages suggest ${msgLevel} upgrade`);
-
         if (isReleaseBranch(branchName, releaseBranch)) {
             core.info(`${ branchName } is a release branch`);
-
+            
+            // check if commits and issues point to a diffent release
+            core.info("checking commits in branch");
+            const msgLevel = await checkMessages(octokit, branchInfo.object.sha, latestMainTag.commit.sha,  issLabs);
+            core.info(`commit messages suggest ${msgLevel} upgrade`);
+            
             if (msgLevel === "none") {
                 nextVersion = semver.inc(version, level);
             }
@@ -287,17 +299,17 @@ async function action() {
     }
 
     if (dryRun === "true") {
-        core.info("dry run, don't perform tagging");
+        core.info("dry run, tag not published");
         return;
     }
 
     const newTag = `${ withV }${ nextVersion }`;
 
-    core.info(`really add tag ${ customTag ? customTag : newTag }`);
+    core.info(`publish tag ${ customTag ? customTag : newTag }`);
 
     const ref = `refs/tags/${ customTag ? customTag : newTag }`;
 
-    await octokit.git.createRef({
+    await octokit.rest.git.createRef({
         owner,
         repo,
         ref,
