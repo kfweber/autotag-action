@@ -44,20 +44,13 @@ async function getLatestTag(octokit, branchName, releaseBranch, boolAll = true) 
         .sort((a, b) => semver.compare(semver.clean(a.name), semver.clean(b.name)));
 
     if (boolAll) {
-        if (isReleaseBranch(branchName, releaseBranch)) {
+        const latestTag = tags[0] ? tags[0].name : "0.0.0";
+
+        if (isReleaseBranch(branchName, releaseBranch) || semver.prerelease(latestTag) === null)  {
             return tags.pop();
         } else {
-            const latestTag = tags[0] ? tags[0].name : "0.0.0";
-            const branchTags = tags.filter((b) => b.name.includes(branchName));
             const branchTag = branchTags.pop();
-            const cleanLatestTag = semver.clean(latestTag.name);
-            const cleanBranchTag = semver.clean(branchTag.name);
-
-            if (semver.compare(cleanLatestTag, cleanBranchTag) == 1) {
-                return latestTag;
-            } else {
-                return branchTag;
-            }
+            return branchTag;
         }
     }
 
