@@ -51,8 +51,7 @@ async function getLatestTag(octokit, branchName, releaseBranch, boolAll = true) 
         if (isReleaseBranch(branchName, releaseBranch) || semver.prerelease(latestTagVersion) === null)  {
             return latestTag;
         } else {
-            const branchTag = branchTags.pop();
-            return branchTag;
+            return branchTags.pop();
         }
     }
 
