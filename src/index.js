@@ -54,12 +54,13 @@ async function getLatestTag(octokit, branchName, releaseBranch, boolAll = true) 
         if (isReleaseBranch(branchName, releaseBranch) || semver.prerelease(latestTagVersion) === null)  {
             return latestTag;
         } else {
-            // if latestBranchTagVersion < latestTagVersion
-            if (semver.compare(latestBranchTagVersion, latestTagVersion, { includePrerelease: true }) == -1) {
-                // Get the latest main release
-                return mainTags.pop();
-            } else {
+            // if latest branch version and latest version are the same
+            if (semver.major(latestTagVersion) === semver.major(latestBranchTagVersion)
+                && semver.minor(latestTagVersion) === semver.minor(latestBranchTagVersion)
+                && semver.patch(latestTagVersion) === semver.patch(latestBranchTagVersion)) {
                 return latestBranchTag
+            } else {
+                return mainTags.pop();
             }
         }
     }
