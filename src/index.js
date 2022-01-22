@@ -44,6 +44,7 @@ async function getLatestTag(octokit, branchName, releaseBranch, boolAll = true) 
         .sort((a, b) => semver.compare(semver.clean(a.name), semver.clean(b.name)));
 
     if (boolAll) {
+        const branchTags = tags.filter((b) => b.name.includes(branchName));
         const latestTag = tags.pop();
         const latestTagVersion = latestTag ? latestTag.name : "0.0.0";
 
