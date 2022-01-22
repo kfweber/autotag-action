@@ -44,10 +44,11 @@ async function getLatestTag(octokit, branchName, releaseBranch, boolAll = true) 
         .sort((a, b) => semver.compare(semver.clean(a.name), semver.clean(b.name)));
 
     if (boolAll) {
-        const latestTag = tags[0] ? tags[0].name : "0.0.0";
+        const latestTag = tags.pop();
+        const latestTagVersion = latestTag ? latestTag.name : "0.0.0";
 
-        if (isReleaseBranch(branchName, releaseBranch) || semver.prerelease(latestTag) === null)  {
-            return tags.pop();
+        if (isReleaseBranch(branchName, releaseBranch) || semver.prerelease(latestTagVersion) === null)  {
+            return latestTag;
         } else {
             const branchTag = branchTags.pop();
             return branchTag;
@@ -254,7 +255,6 @@ async function action() {
         core.info(`the latest main tag of the repository ${ JSON.stringify(latestMainTag, undefined, 2) }`);
 
         const versionTag = latestTag ? latestTag.name : "0.0.0";
-        const mainVersionTag = latestMainTag ? latestMainTag.name : "0.0.0";
 
         core.setOutput("tag", versionTag);
 
@@ -264,7 +264,6 @@ async function action() {
 
         // core.info(`The repo tags: ${ JSON.stringify(latestTag, undefined, 2) }`);
         
-        const mainVersion = semver.clean(mainVersionTag);
         const version   = semver.clean(versionTag);
         
         nextVersion = semver.inc(
@@ -272,21 +271,6 @@ async function action() {
             "prerelease",
             branchName
         );
-        
-        // If main tag is greater, use that to increase prerelease
-        // if (semver.compare(mainVersionTag, versionTag) == 1) {
-        //     nextVersion = semver.inc(
-        //         version,
-        //         "patch",
-        //         branchName
-        //     );
-        // } else {
-        //     nextVersion = semver.inc(
-        //         version,
-        //         "prerelease",
-        //         branchName
-        //     );
-        // }
 
         core.info(`default to prerelease version ${ nextVersion }`);
 
