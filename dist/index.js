@@ -9462,7 +9462,7 @@ async function action() {
         const version   = semver.clean(versionTag);
         
         // If main tag is greater, use that to increase prerelease
-        if (semver.compare(latestMainTag, latestMainTag) == 1) {
+        if (semver.compare(mainVersionTag, versionTag) == 1) {
             nextVersion = semver.inc(
                 mainVersion,
                 "prerelease",
