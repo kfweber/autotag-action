@@ -45,7 +45,6 @@ async function getLatestTag(octokit, branchName, boolAll = true) {
 
     if (boolAll) {
         const branchTags = tags.filter((b) => b.name.includes(branchName));
-        core.info(branchTags);
         return branchTags.pop();
     }
 
