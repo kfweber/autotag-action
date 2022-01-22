@@ -45,6 +45,7 @@ async function getLatestTag(octokit, branchName, boolAll = true) {
 
     if (boolAll) {
         const branchTags = tags.filter((b) => b.name.includes(branchName));
+        core.info(branchTags);
         return branchTags.pop();
     }
 
@@ -255,7 +256,7 @@ async function action() {
             throw new Error("no new commits, avoid tagging");
         }
 
-        core.info(`The repo tags: ${ JSON.stringify(latestTag, undefined, 2) }`);
+        // core.info(`The repo tags: ${ JSON.stringify(latestTag, undefined, 2) }`);
 
         const version   = semver.clean(versionTag);
 
