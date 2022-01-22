@@ -9251,7 +9251,7 @@ async function getLatestTag(octokit, branchName, releaseBranch, boolAll = true) 
             return latestTag;
         } else {
             // if latestBranchTagVersion < latestTagVersion
-            if (semver.compare(latestBranchTagVersion, latestTagVersion) == -1) {
+            if (semver.compare(latestBranchTagVersion, latestTagVersion, { includePrerelease: true }) == -1) {
                 // Get the latest main release
                 return mainTags.pop();
             } else {
