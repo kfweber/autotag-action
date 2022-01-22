@@ -43,23 +43,31 @@ async function getLatestTag(octokit, branchName, releaseBranch, boolAll = true) 
     tags
         .sort((a, b) => semver.compare(semver.clean(a.name), semver.clean(b.name)));
 
+    const mainTags = tags.filter((b) => semver.prerelease(b.name) === null);
+
     if (boolAll) {
         const branchTags = tags.filter((b) => b.name.includes(branchName));
         const latestTag = tags.pop();
         const latestTagVersion = latestTag ? latestTag.name : "0.0.0";
-
+        const latestBranchTag = branchTags.pop();
+        const latestBranchTagVersion = latestBranchTag ? latestBranchTag.name : "0.0.0";
         if (isReleaseBranch(branchName, releaseBranch) || semver.prerelease(latestTagVersion) === null)  {
             return latestTag;
         } else {
-            return branchTags.pop();
+            // if latestBranchTagVersion < latestTagVersion
+            if (semver.compare(latestBranchTagVersion, latestTagVersion) == -1) {
+                // Get the latest main release
+                return mainTags.pop();
+            } else {
+                return latestBranchTag
+            }
         }
     }
 
     // filter prereleases
     // core.info("filter only main releases");
 
-    const filtered = tags.filter((b) => semver.prerelease(b.name) === null);
-    const result = filtered.pop();
+    const result = mainTags.pop();
 
     return result;
 }
