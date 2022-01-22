@@ -9223,7 +9223,7 @@ async function checkTag(octokit, tagName) {
     return false;
 }
 
-async function getLatestTag(octokit, boolAll = true) {
+async function getLatestTag(octokit, branchName, boolAll = true) {
 
     const tags = await octokit.paginate(
         octokit.rest.repos.listTags,
@@ -9234,13 +9234,14 @@ async function getLatestTag(octokit, boolAll = true) {
         },
         response => response.data.filter(tag => semver.clean(tag.name) !== null)
     )
-
+    
     // ensure the highest version number is the last element
     tags
         .sort((a, b) => semver.compare(semver.clean(a.name), semver.clean(b.name)));
 
     if (boolAll) {
-        return tags.pop();
+        const branchTags = tags.filter((b) => b.name.includes(branchName));
+        return branchTags.pop();
     }
 
     // filter prereleases
@@ -9436,8 +9437,8 @@ async function action() {
 
         core.info(`maching refs: ${ sha }`);
 
-        const latestTag = await getLatestTag(octokit);
-        const latestMainTag = await getLatestTag(octokit, false);
+        const latestTag = await getLatestTag(octokit, branchName);
+        const latestMainTag = await getLatestTag(octokit, branchName, false);
 
         core.info(`the latest tag of the repository ${ JSON.stringify(latestTag, undefined, 2) }`);
         core.info(`the latest main tag of the repository ${ JSON.stringify(latestMainTag, undefined, 2) }`);
@@ -9450,7 +9451,7 @@ async function action() {
             throw new Error("no new commits, avoid tagging");
         }
 
-        core.info(`The repo tags: ${ JSON.stringify(latestTag, undefined, 2) }`);
+        // core.info(`The repo tags: ${ JSON.stringify(latestTag, undefined, 2) }`);
 
         const version   = semver.clean(versionTag);
 
