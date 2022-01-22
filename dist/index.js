@@ -9461,20 +9461,26 @@ async function action() {
         const mainVersion = semver.clean(mainVersionTag);
         const version   = semver.clean(versionTag);
         
+        nextVersion = semver.inc(
+            version,
+            "prerelease",
+            branchName
+        );
+        
         // If main tag is greater, use that to increase prerelease
-        if (semver.compare(mainVersionTag, versionTag) == 1) {
-            nextVersion = semver.inc(
-                mainVersion,
-                "prerelease",
-                branchName
-            );
-        } else {
-            nextVersion = semver.inc(
-                version,
-                "prerelease",
-                branchName
-            );
-        }
+        // if (semver.compare(mainVersionTag, versionTag) == 1) {
+        //     nextVersion = semver.inc(
+        //         version,
+        //         "patch",
+        //         branchName
+        //     );
+        // } else {
+        //     nextVersion = semver.inc(
+        //         version,
+        //         "prerelease",
+        //         branchName
+        //     );
+        // }
 
         core.info(`default to prerelease version ${ nextVersion }`);
 
